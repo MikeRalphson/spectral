@@ -23,8 +23,11 @@
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "spectral": "src/cli/bin/run"
+  },
   "files": [
-    ".*",
+    "./*",
     "src/*",
     "src/functions",
     "src/rulesets",
