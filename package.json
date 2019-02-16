@@ -24,7 +24,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "spectral": "src/cli/bin/run"
+    "spectral": "./bin/run"
+  },
+  "oclif": {
+    "commands": "./dist/cli/commands",
+    "bin": "spectral",
+    "plugins": [
+      "@oclif/plugin-help"
+    ]
   },
   "files": [
     "./*",
@@ -38,7 +45,7 @@
     "node": ">=8.3.0"
   },
   "scripts": {
-    "build": "sl-scripts build",
+    "build": "sl-scripts build && oclif-dev manifest && node ./scripts/prepare-cli",
     "build.docs": "sl-scripts build:typedoc",
     "commit": "git-cz",
     "lint": "sl-scripts lint",
@@ -52,16 +59,23 @@
     "test.watch": "yarn test --watch"
   },
   "dependencies": {
+    "@oclif/command": "1.5.x",
+    "@oclif/plugin-help": "2.1.x",
     "@stoplight/json": "1.x.x",
     "@stoplight/types": "3.x.x",
+    "@stoplight/yaml": "1.2.x",
     "ajv": "6.x.x",
     "jsonpath": "https://github.com/stoplightio/jsonpath#78140eb1980d4ff385780e2fa12177735685ec3e",
-    "lodash": ">=4.17.5"
+    "lodash": ">=4.17.5",
+    "jsonpath": "git://github.com/stoplightio/jsonpath.git#fe90d42",
+    "node-fetch": "2.x.x"
   },
   "devDependencies": {
+    "@oclif/dev-cli": "1.21.x",
     "@stoplight/scripts": "3.1.0",
     "@types/jsonpath": "0.2.x",
     "@types/lodash": "4.x.x",
+    "fs-extra": "^7.0.1",
     "typescript": "3.2.2"
   },
   "lint-staged": {
