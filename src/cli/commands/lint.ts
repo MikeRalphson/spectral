@@ -1,5 +1,6 @@
 import { Command, flags as flagHelpers } from '@oclif/command';
 import { parseWithPointers } from '@stoplight/yaml';
+import { ValidationSeverity } from '@stoplight/types';
 import { existsSync, readFile } from 'fs';
 import { inspect, promisify } from 'util';
 
@@ -26,9 +27,9 @@ linting ./openapi.yaml
       default: 'utf8',
       description: 'text encoding to use',
     }),
-    maxWarn: flagHelpers.integer({
+    maxResults: flagHelpers.integer({
       char: 'm',
-      description: '[default: all] maximum warnings to show',
+      description: '[default: all] maximum results to show',
     }),
     verbose: flagHelpers.boolean({
       char: 'v',
@@ -100,8 +101,8 @@ async function lint(name: string, flags: any, command: Lint) {
       command.log('No errors or warnings found!');
     } else {
       process.exitCode = 1;
-      const warnings = flags.maxWarn ? output.results.slice(0, flags.maxWarn) : output.results;
-      for (const issue of warnings) {
+      const results = flags.maxResults ? output.results.slice(0, flags.maxResults) : output.results;
+      for (const issue of results) {
         command.warn(inspect(issue, { depth: null, colors: true }));
       }
     }
