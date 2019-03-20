@@ -1,8 +1,9 @@
 import { Command, flags as flagHelpers } from '@oclif/command';
-import { parseWithPointers } from '@stoplight/yaml';
 import { ValidationSeverity } from '@stoplight/types';
+import { parseWithPointers } from '@stoplight/yaml';
 import { existsSync, readFile } from 'fs';
 import { inspect, promisify } from 'util';
+import { IRuleResult } from '../../types/spectral';
 
 // @ts-ignore
 import * as fetch from 'node-fetch';
@@ -10,6 +11,72 @@ import * as fetch from 'node-fetch';
 import { oas2Functions, oas2Rules } from '../../rulesets/oas2';
 import { oas3Functions, oas3Rules } from '../../rulesets/oas3';
 import { Spectral } from '../../spectral';
+
+const Formatter = class {
+  private results: IRuleResult[];
+
+  constructor(results: IRuleResult[]) {
+    this.results = results;
+  }
+  // in Formatter classes we use console.warn not command.warn to omit
+  // the confusing 'Warning' prefix for non-warning results
+};
+
+const DefaultFormatter = class extends Formatter {
+  private pathToJsonPointer(path: Array<string | number>) {
+    let result = '#';
+    for (const component of path) {
+      result +=
+        '/' +
+        component
+          .toString()
+          .split('~')
+          .join('~0')
+          .split('/')
+          .join('~1');
+    }
+    return result;
+  }
+
+  private format(issue: IRuleResult) {
+    const filtered = { message: issue.message, summary: issue.summary, pointer: this.pathToJsonPointer(issue.path) };
+    return issue.severityLabel + ': ' + inspect(filtered, { depth: null, colors: true, compact: false });
+  }
+
+  public warn() {
+    const errors = this.results.filter(e => e.severity === ValidationSeverity.Error);
+    const warnings = this.results.filter(e => e.severity === ValidationSeverity.Warn);
+    const info = this.results.filter(e => e.severity === ValidationSeverity.Info);
+    if (errors.length) {
+      console.warn(`Errors found: ${errors.length}`);
+      for (const issue of errors) {
+        console.warn(this.format(issue));
+      }
+    }
+    if (warnings.length) {
+      console.warn(`Warnings found: ${warnings.length}`);
+      for (const issue of warnings) {
+        console.warn(this.format(issue));
+      }
+    }
+    if (info.length) {
+      console.warn(`Informational messages: ${info.length}`);
+      for (const issue of info) {
+        console.warn(this.format(issue));
+      }
+    }
+  }
+};
+
+const JsonFormatter = class extends Formatter {
+  public toString() {
+    return JSON.stringify(this.results, null, 2);
+  }
+
+  public warn() {
+    console.warn(this.toString());
+  }
+};
 
 export default class Lint extends Command {
   public static description = 'lint a JSON/YAML document from a file or URL';
@@ -26,6 +93,12 @@ linting ./openapi.yaml
       char: 'e',
       default: 'utf8',
       description: 'text encoding to use',
+    }),
+    format: flagHelpers.string({
+      char: 'f',
+      default: 'default',
+      description: 'output format to use',
+      options: ['default', 'json'],
     }),
     maxResults: flagHelpers.integer({
       char: 'm',
@@ -102,9 +175,8 @@ async function lint(name: string, flags: any, command: Lint) {
     } else {
       process.exitCode = 1;
       const results = flags.maxResults ? output.results.slice(0, flags.maxResults) : output.results;
-      for (const issue of results) {
-        command.warn(inspect(issue, { depth: null, colors: true }));
-      }
+      const formatter = flags.format === 'json' ? new JsonFormatter(results) : new DefaultFormatter(results);
+      formatter.warn();
     }
   } catch (ex) {
     process.exitCode = 2;
